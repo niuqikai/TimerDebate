@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>辩论赛计时器 - 最终修复版 | 无弹窗 | 独立模式单次限时正常</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234a9eff'/%3E%3Ctext x='50' y='68' font-size='50' text-anchor='middle' fill='white' font-family='Arial'%3E⚖️%3C/text%3E%3C/svg%3E">
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', Roboto, Arial, sans-serif;
+            background: linear-gradient(145deg, #1a2639 0%, #0d1b2a 100%);
+            margin: 0;
+            min-height: 100vh;
+            padding: 20px;
+            color: #f0f4fa;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        body.fullscreen-mode {
+            padding: 0 !important;
+            background: #0a0f1c;
+        }
+        body.fullscreen-mode .rounds-panel { display: none !important; }
+        body.fullscreen-mode .app-container {
+            max-width: none !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        body.fullscreen-mode .timer-panel {
+            border-radius: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: 100vh;
+            backdrop-filter: blur(20px);
+        }
+        body.fullscreen-mode .lcd-time { font-size: 10rem !important; padding: 30px 50px !important; }
+        body.fullscreen-mode .time-box { padding: 40px 50px !important; min-height: 520px !important; }
+        body.fullscreen-mode .ctrl-btn { padding: 18px 36px !important; font-size: 1.6rem !important; }
+        body.fullscreen-mode .team-name { font-size: 3.2rem !important; }
+        body.fullscreen-mode .topic { font-size: 2rem !important; }
+        body.fullscreen-mode .footer { display: none !important; }
+        .app-container {
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+        }
+        .rounds-panel {
+            flex: 1.2;
+            min-width: 280px;
+            background: rgba(15, 25, 45, 0.75);
+            backdrop-filter: blur(8px);
+            border-radius: 32px;
+            padding: 20px 16px;
+            border: 1px solid rgba(72, 187, 255, 0.3);
+        }
+        .rounds-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .rounds-header h2 {
+            margin: 0;
+            font-size: 1.6rem;
+            background: linear-gradient(135deg, #B2F0FF, #4A9EFF);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .btn-icon {
+            background: #2c3e66;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        .btn-icon:hover { background: #3e5a8a; transform: scale(0.97); }
+        .round-list {
+            max-height: 55vh;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+        .round-item {
+            background: #0f1a2e;
+            margin-bottom: 12px;
+            border-radius: 28px;
+            padding: 12px 12px;
+            cursor: pointer;
+            border-left: 6px solid #4a9eff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .round-item.active {
+            background: #1e3a5f;
+            border-left-color: #ffd966;
+            box-shadow: 0 0 0 2px #ffd96680;
+        }
+        .round-info { flex: 1; }
+        .round-name { font-weight: bold; font-size: 1rem; margin-bottom: 4px; }
+        .round-type { font-size: 0.7rem; opacity: 0.7; }
+        .round-actions { display: flex; gap: 6px; align-items: center; }
+        .small-btn {
+            background: #2a3b55;
+            border: none;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .small-btn:hover { background: #ff6b6b; }
+        .move-btn { background: #3a5a7a; }
+        .move-btn:hover { background: #5a8aaa; }
+        .timer-panel {
+            flex: 2.5;
+            min-width: 500px;
+            background: rgba(10, 20, 35, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 48px;
+            padding: 28px 24px;
+            border: 1px solid rgba(100, 180, 250, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .title-section { text-align: center; margin-bottom: 10px; }
+        .round-name-display {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(120deg, #FFE6B0, #FFB347);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .teams { display: flex; justify-content: space-between; margin: 12px 0 16px; gap: 20px; }
+        .team-card {
+            flex: 1;
+            background: #07111e80;
+            border-radius: 32px;
+            padding: 12px;
+            text-align: center;
+        }
+        .team-name { font-size: 2.4rem; font-weight: bold; }
+        .topic { font-size: 1.4rem; opacity: 0.9; margin-top: 6px; }
+        .time-displays.double-layout {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+            flex: 1;
+        }
+        .time-box {
+            background: #00000066;
+            border-radius: 48px;
+            padding: 20px 25px;
+            min-width: 300px;
+            min-height: 440px;
+            text-align: center;
+            backdrop-filter: blur(4px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .single-extra-space {
+            height: 20px;
+            visibility: hidden;
+        }
+        .time-label { font-size: 1.4rem; margin-bottom: 12px; font-weight: bold; }
+        .lcd-time {
+            font-family: 'Courier New', monospace;
+            font-size: 5rem;
+            font-weight: bold;
+            letter-spacing: 5px;
+            background: #000000aa;
+            padding: 15px 25px;
+            border-radius: 28px;
+            display: inline-block;
+            color: #0ff;
+            text-shadow: 0 0 6px cyan;
+            transition: color 0.1s;
+            margin: 10px 0;
+        }
+        .lcd-time.warning {
+            color: #ff4444 !important;
+            text-shadow: 0 0 8px red;
+        }
+        .single-limit {
+            margin-top: 16px;
+            background: #1f2a44;
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 1rem;
+        }
+        .sub-timers {
+            margin-top: 20px;
+            display: grid;
+            gap: 12px;
+            justify-content: center;
+        }
+        .sub-timers.pos-grid,
+        .sub-timers.neg-grid {
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        }
+        .sub-timers[data-count="4"] {
+            grid-template-columns: repeat(4, 1fr);
+        }
+        .sub-timers[data-count="6"] {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .sub-timer-item {
+            background: #1a2a44;
+            border-radius: 28px;
+            padding: 10px 14px;
+            text-align: center;
+        }
+        .sub-timer-label {
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        .sub-timer-value {
+            font-family: monospace;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .speak-btn {
+            background: #4a9eff;
+            border: none;
+            color: white;
+            border-radius: 40px;
+            padding: 4px 12px;
+            margin-top: 8px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            width: 100%;
+        }
+        .speak-btn.active {
+            background: #ffaa33;
+            color: #1e2a2a;
+            font-weight: bold;
+        }
+        .control-bar {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin: 20px 0 10px;
+        }
+        .ctrl-btn {
+            background: #2c3e66;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .ctrl-btn:active { transform: scale(0.96); }
+        .ctrl-btn.primary { background: #1e6f3f; }
+        .ctrl-btn.warning { background: #b5651e; }
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        .fullscreen-btn { background: #2c5f8a; margin-left: 10px; }
+        .file-zone {
+            margin-top: 24px;
+            background: #07111e60;
+            border-radius: 32px;
+            padding: 16px;
+        }
+        .file-label {
+            background: #2c5a7a;
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 32px;
+            cursor: pointer;
+        }
+        input[type="file"] { display: none; }
+        .status-text { font-size: 0.8rem; margin-top: 12px; color: #bbd9ff; }
+        .flex-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #88aaff;
+            border-top: 1px solid #2c456e;
+            padding-top: 12px;
+        }
+        @media (max-width: 900px) {
+            .timer-panel { min-width: auto; }
+            .lcd-time { font-size: 3.5rem; }
+            .time-displays.double-layout { flex-direction: column; }
+            .team-name { font-size: 1.8rem; }
+            .topic { font-size: 1rem; }
+            .time-box { min-height: 380px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-container" id="appContainer">
+    <div class="rounds-panel">
+        <div class="rounds-header">
+            <h2>📋 辩论环节</h2>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-icon" id="addRoundBtn">➕ 新增环节</button>
+                <button class="btn-icon" id="exportPdsBtn">📤 导出PDS</button>
+            </div>
+        </div>
+        <div id="roundListContainer" class="round-list"></div>
+        <div class="file-zone">
+            <label for="pdsUpload" class="file-label">📂 上传PDS文件 (.pds / .txt)</label>
+            <input type="file" id="pdsUpload" accept=".pds,.txt,text/plain">
+            <div class="status-text" id="pdsStatus">支持PDS v2/v4 完整规则（B_ALL共享时间，B_SUM独立）</div>
+        </div>
+        <div class="flex-row" style="margin-top: 12px; justify-content: space-between;">
+            <span>🏷️ 全局辩题/队伍可编辑</span>
+            <button id="editGlobalBtn" class="small-btn" style="background:#3a6b92;">✏️ 编辑</button>
+        </div>
+        <div id="globalInfoPreview" style="font-size:0.75rem; margin-top: 8px;">
+            正方: 人性本善 | 反方: 人性本恶<br>
+            正方队: 佛系中年队 | 反方队: 佛系中年二队
+        </div>
+    </div>
+
+    <div class="timer-panel">
+        <div style="display: flex; justify-content: flex-end;">
+            <button id="fullscreenToggleBtn" class="ctrl-btn fullscreen-btn">🖥️ 全屏计时</button>
+        </div>
+        <div class="title-section">
+            <div class="round-name-display" id="currentRoundName">加载环节...</div>
+        </div>
+        <div class="teams">
+            <div class="team-card"><div class="team-name" id="positiveTeamName">佛系中年队</div><div class="topic" id="positiveTopic">辩题</div></div>
+            <div class="team-card"><div class="team-name" id="negativeTeamName">佛系中年二队</div><div class="topic" id="negativeTopic">辩题</div></div>
+        </div>
+        <div id="timerDisplayArea"></div>
+        <div class="control-bar" id="controlBar"></div>
+        <div class="nav-buttons">
+            <button class="ctrl-btn" data-action="prev">◀ 上一步</button>
+            <button class="ctrl-btn" data-action="next">下一步 ▶</button>
+        </div>
+        <div class="footer">
+            开发：牛琪锴 | 联系邮箱：niuqikai@qq.com
+        </div>
+    </div>
+</div>
+
+<script>
+    // ======================= 音频提示 =======================
+    let audioCtx = null;
+    let activeOscillator = null;
+    function initAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    function playWarningBeep() {
+        if (!audioCtx) { initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+        if (audioCtx.state !== 'running') return;
+        if (activeOscillator) { try { activeOscillator.stop(); } catch(e) {} activeOscillator = null; }
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 660;
+        gain.gain.value = 0.4;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+        osc.stop(now + 1.5);
+        activeOscillator = osc;
+        osc.onended = () => { if (activeOscillator === osc) activeOscillator = null; };
+    }
+    function playEndBeep() {
+        if (!audioCtx) { initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+        if (audioCtx.state !== 'running') return;
+        if (activeOscillator) { try { activeOscillator.stop(); } catch(e) {} activeOscillator = null; }
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 450;
+        gain.gain.value = 0.4;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+        osc.stop(now + 3.0);
+        activeOscillator = osc;
+        osc.onended = () => { if (activeOscillator === osc) activeOscillator = null; };
+    }
+    document.body.addEventListener('click', () => {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }, { once: true });
+
+    // ======================= 全局数据 =======================
+    let globalConfig = {
+        positiveTeam: "佛系中年队",
+        negativeTeam: "佛系中年二队",
+        positiveTopic: "人性本善",
+        negativeTopic: "人性本恶"
+    };
+    let rounds = [];
+    let currentRoundIndex = 0;
+    let globalTimerInterval = null;
+    let isTimerRunning = false;
+    let startTimestamp = 0;
+    let startRemainingMs = 0;
+    let currentActiveSpeaker = null;
+    let warningPlayed = false;
+    let endBeepPlayed = false;
+
+    function formatTime(ms) {
+        if (ms < 0) ms = 0;
+        if (ms === Infinity) return "不限";
+        let totalSecs = Math.floor(ms / 1000);
+        let mins = Math.floor(totalSecs / 60);
+        let secs = totalSecs % 60;
+        return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+    }
+
+    function getCurrentTotalSeconds(round) {
+        if (round.type === 'single') {
+            return (round.totalTimeMs === Infinity) ? Infinity : Math.floor(round.totalTimeMs / 1000);
+        } else {
+            if (round.sharedTotalMs !== undefined) {
+                return (round.sharedTotalMs === Infinity) ? Infinity : Math.floor(round.sharedTotalMs / 1000);
+            } else {
+                let totalMs = (round.currentSpeaker === 'positive') ? round.positiveRemainingMs : round.negativeRemainingMs;
+                return (totalMs === Infinity) ? Infinity : Math.floor(totalMs / 1000);
+            }
+        }
+    }
+
+    function checkAndAlert(remainingSec, round) {
+        if (remainingSec <= 0 || warningPlayed) return;
+        const totalSec = getCurrentTotalSeconds(round);
+        if (totalSec === Infinity) return;
+        if (totalSec > 90) {
+            if (remainingSec === 30) { playWarningBeep(); warningPlayed = true; }
+        } else {
+            if (remainingSec === 10) { playWarningBeep(); warningPlayed = true; }
+        }
+    }
+
+    // ======================= 核心界面更新（完整保留，略作精简但功能全） =======================
+    function updateTimerDisplay(round, forceRebuild = false) {
+        if (!round) return;
+        if (round.type === 'single') {
+            const secs = (round.remainingMs !== Infinity) ? Math.floor(round.remainingMs / 1000) : Infinity;
+            const timerEl = document.getElementById('singleTimer');
+            if (timerEl && !forceRebuild) {
+                timerEl.innerText = (round.remainingMs === Infinity) ? "不限" : formatTime(round.remainingMs);
+                let threshold = getCurrentTotalSeconds(round) > 90 ? 30 : 10;
+                if (round.remainingMs !== Infinity && secs <= threshold) timerEl.classList.add('warning');
+                else timerEl.classList.remove('warning');
+                if (secs !== Infinity) checkAndAlert(secs, round);
+            } else {
+                const area = document.getElementById('timerDisplayArea');
+                area.innerHTML = `<div class="time-displays" style="justify-content:center;"><div class="time-box"><div class="time-label">⏱️ 环节剩余</div><div class="lcd-time" id="singleTimer">${round.remainingMs === Infinity ? "不限" : formatTime(round.remainingMs)}</div><div class="single-extra-space"></div></div></div>`;
+                const newTimer = document.getElementById('singleTimer');
+                let threshold = getCurrentTotalSeconds(round) > 90 ? 30 : 10;
+                if (round.remainingMs !== Infinity && secs <= threshold) newTimer.classList.add('warning');
+            }
+        } else {
+            const posSecShared = (round.positiveRemainingMs !== Infinity) ? Math.floor(round.positiveRemainingMs / 1000) : Infinity;
+            const negSecShared = (round.negativeRemainingMs !== Infinity) ? Math.floor(round.negativeRemainingMs / 1000) : Infinity;
+            const posEl = document.getElementById('posTimer');
+            const negEl = document.getElementById('negTimer');
+            const posSimple = (round.subTimers && round.subTimers.pos.length === 1);
+            const negSimple = (round.subTimers && round.subTimers.neg.length === 1);
+            let posDisplayMs = (round.sharedTotalMs !== undefined) ? round.sharedTotalMs : round.positiveRemainingMs;
+            let negDisplayMs = (round.sharedTotalMs !== undefined) ? round.sharedTotalMs : round.negativeRemainingMs;
+            if (!posSimple && currentActiveSpeaker && currentActiveSpeaker.side === 'positive') {
+                const st = round.subTimers.pos[currentActiveSpeaker.index];
+                if (st) posDisplayMs = st.totalRemaining;
+            }
+            if (!negSimple && currentActiveSpeaker && currentActiveSpeaker.side === 'negative') {
+                const st = round.subTimers.neg[currentActiveSpeaker.index];
+                if (st) negDisplayMs = st.totalRemaining;
+            }
+            if (posEl && negEl && !forceRebuild) {
+                posEl.innerText = (posDisplayMs === Infinity) ? "不限" : formatTime(posDisplayMs);
+                negEl.innerText = (negDisplayMs === Infinity) ? "不限" : formatTime(negDisplayMs);
+                let threshold = getCurrentTotalSeconds(round) > 90 ? 30 : 10;
+                let totalRemainingSec = (round.sharedTotalMs !== undefined) ? Math.floor(round.sharedTotalMs / 1000) : (round.currentSpeaker === 'positive' ? posSecShared : negSecShared);
+                if (totalRemainingSec !== Infinity && totalRemainingSec <= threshold) {
+                    posEl.classList.add('warning');
+                    negEl.classList.add('warning');
+                } else {
+                    posEl.classList.remove('warning');
+                    negEl.classList.remove('warning');
+                }
+                let currentSec = (round.sharedTotalMs !== undefined) ? Math.floor(round.sharedTotalMs / 1000) : (round.currentSpeaker === 'positive' ? posSecShared : negSecShared);
+                if (currentSec !== Infinity) checkAndAlert(currentSec, round);
+                if (posSimple) {
+                    const st = round.subTimers.pos[0];
+                    const limitSpan = document.getElementById('posSimpleLimit');
+                    if (limitSpan) limitSpan.innerText = (st.limitInitial > 0) ? `单次发言剩余 ${Math.floor(st.limitRemaining/1000)}秒` : `单次发言不限时`;
+                }
+                if (negSimple) {
+                    const st = round.subTimers.neg[0];
+                    const limitSpan = document.getElementById('negSimpleLimit');
+                    if (limitSpan) limitSpan.innerText = (st.limitInitial > 0) ? `单次发言剩余 ${Math.floor(st.limitRemaining/1000)}秒` : `单次发言不限时`;
+                }
+                if (!posSimple && round.subTimers) {
+                    for (let i = 0; i < round.subTimers.pos.length; i++) {
+                        const st = round.subTimers.pos[i];
+                        const totalElem = document.getElementById(`posSubTotal_${i}`);
+                        const limitElem = document.getElementById(`posSubLimit_${i}`);
+                        if (totalElem) totalElem.innerText = (st.totalInitial > 0) ? formatTime(st.totalRemaining) : '不限';
+                        if (limitElem && st.limitInitial > 0) limitElem.innerText = `${Math.floor(st.limitRemaining / 1000)}s`;
+                        else if (limitElem) limitElem.innerText = `不限`;
+                        const btn = document.getElementById(`posSpeakBtn_${i}`);
+                        if (btn && currentActiveSpeaker && currentActiveSpeaker.side === 'positive' && currentActiveSpeaker.index === i) {
+                            btn.classList.add('active'); btn.innerText = '🎤 发言中';
+                        } else if (btn) { btn.classList.remove('active'); btn.innerText = '🎤 发言'; }
+                    }
+                }
+                if (!negSimple && round.subTimers) {
+                    for (let i = 0; i < round.subTimers.neg.length; i++) {
+                        const st = round.subTimers.neg[i];
+                        const totalElem = document.getElementById(`negSubTotal_${i}`);
+                        const limitElem = document.getElementById(`negSubLimit_${i}`);
+                        if (totalElem) totalElem.innerText = (st.totalInitial > 0) ? formatTime(st.totalRemaining) : '不限';
+                        if (limitElem && st.limitInitial > 0) limitElem.innerText = `${Math.floor(st.limitRemaining / 1000)}s`;
+                        else if (limitElem) limitElem.innerText = `不限`;
+                        const btn = document.getElementById(`negSpeakBtn_${i}`);
+                        if (btn && currentActiveSpeaker && currentActiveSpeaker.side === 'negative' && currentActiveSpeaker.index === i) {
+                            btn.classList.add('active'); btn.innerText = '🎤 发言中';
+                        } else if (btn) { btn.classList.remove('active'); btn.innerText = '🎤 发言'; }
+                    }
+                }
+            } else {
+                let posHtml = '', negHtml = '';
+                if (posSimple) {
+                    const st = round.subTimers.pos[0];
+                    const limitHtml = (st.limitInitial > 0) ? `<div class="single-limit" id="posSimpleLimit">单次发言剩余 ${Math.floor(st.limitRemaining/1000)}秒</div>` : `<div class="single-limit" id="posSimpleLimit">单次发言不限时</div>`;
+                    posHtml = `<div class="time-box"><div class="time-label">🎤 正方剩余时间</div><div class="lcd-time" id="posTimer">${posDisplayMs === Infinity ? "不限" : formatTime(posDisplayMs)}</div>${limitHtml}${round.currentSpeaker === 'positive' ? '<div class="speaker-badge">🎙️ 正方发言中</div>' : ''}</div>`;
+                } else {
+                    let subHtml = '';
+                    if (round.subTimers && round.subTimers.pos.length) {
+                        const posCount = round.subTimers.pos.length;
+                        subHtml = `<div class="sub-timers pos-grid" data-count="${posCount}">` + round.subTimers.pos.map((st, idx) => `
+                            <div class="sub-timer-item">
+                                <div class="sub-timer-label">辩手${idx+1}</div>
+                                <div class="sub-timer-value" id="posSubTotal_${idx}">${st.totalInitial > 0 ? formatTime(st.totalRemaining) : '不限'}</div>
+                                <div class="sub-timer-value" style="font-size:0.9rem;">单次: <span id="posSubLimit_${idx}">${st.limitInitial > 0 ? Math.floor(st.limitRemaining/1000)+'s' : '不限'}</span></div>
+                                <button class="speak-btn" data-side="positive" data-index="${idx}" id="posSpeakBtn_${idx}">🎤 发言</button>
+                            </div>
+                        `).join('') + `</div>`;
+                    }
+                    posHtml = `<div class="time-box"><div class="time-label">🎤 正方剩余时间</div><div class="lcd-time" id="posTimer">${posDisplayMs === Infinity ? "不限" : formatTime(posDisplayMs)}</div>${subHtml}${round.currentSpeaker === 'positive' ? '<div class="speaker-badge">🎙️ 正方发言中</div>' : ''}</div>`;
+                }
+                if (negSimple) {
+                    const st = round.subTimers.neg[0];
+                    const limitHtml = (st.limitInitial > 0) ? `<div class="single-limit" id="negSimpleLimit">单次发言剩余 ${Math.floor(st.limitRemaining/1000)}秒</div>` : `<div class="single-limit" id="negSimpleLimit">单次发言不限时</div>`;
+                    negHtml = `<div class="time-box"><div class="time-label">🎤 反方剩余时间</div><div class="lcd-time" id="negTimer">${negDisplayMs === Infinity ? "不限" : formatTime(negDisplayMs)}</div>${limitHtml}${round.currentSpeaker === 'negative' ? '<div class="speaker-badge">🎙️ 反方发言中</div>' : ''}</div>`;
+                } else {
+                    let subHtml = '';
+                    if (round.subTimers && round.subTimers.neg.length) {
+                        const negCount = round.subTimers.neg.length;
+                        subHtml = `<div class="sub-timers neg-grid" data-count="${negCount}">` + round.subTimers.neg.map((st, idx) => `
+                            <div class="sub-timer-item">
+                                <div class="sub-timer-label">辩手${idx+1}</div>
+                                <div class="sub-timer-value" id="negSubTotal_${idx}">${st.totalInitial > 0 ? formatTime(st.totalRemaining) : '不限'}</div>
+                                <div class="sub-timer-value" style="font-size:0.9rem;">单次: <span id="negSubLimit_${idx}">${st.limitInitial > 0 ? Math.floor(st.limitRemaining/1000)+'s' : '不限'}</span></div>
+                                <button class="speak-btn" data-side="negative" data-index="${idx}" id="negSpeakBtn_${idx}">🎤 发言</button>
+                            </div>
+                        `).join('') + `</div>`;
+                    }
+                    negHtml = `<div class="time-box"><div class="time-label">🎤 反方剩余时间</div><div class="lcd-time" id="negTimer">${negDisplayMs === Infinity ? "不限" : formatTime(negDisplayMs)}</div>${subHtml}${round.currentSpeaker === 'negative' ? '<div class="speaker-badge">🎙️ 反方发言中</div>' : ''}</div>`;
+                }
+                const area = document.getElementById('timerDisplayArea');
+                area.innerHTML = `<div class="time-displays double-layout">${posHtml}${negHtml}</div>`;
+                if (!posSimple) {
+                    document.querySelectorAll('.speak-btn[data-side="positive"]').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const side = btn.dataset.side;
+                            const idx = parseInt(btn.dataset.index);
+                            selectSpeaker(round, side, idx);
+                        });
+                    });
+                }
+                if (!negSimple) {
+                    document.querySelectorAll('.speak-btn[data-side="negative"]').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const side = btn.dataset.side;
+                            const idx = parseInt(btn.dataset.index);
+                            selectSpeaker(round, side, idx);
+                        });
+                    });
+                }
+                let totalRemainingSec = (round.sharedTotalMs !== undefined) ? Math.floor(round.sharedTotalMs / 1000) : (round.currentSpeaker === 'positive' ? posSecShared : negSecShared);
+                let threshold = getCurrentTotalSeconds(round) > 90 ? 30 : 10;
+                const newPos = document.getElementById('posTimer');
+                const newNeg = document.getElementById('negTimer');
+                if (totalRemainingSec !== Infinity && totalRemainingSec <= threshold) {
+                    newPos.classList.add('warning');
+                    newNeg.classList.add('warning');
+                }
+            }
+        }
+    }
+
+    function selectSpeaker(round, side, idx) {
+        if (round.type !== 'double') return;
+        stopTimer();
+        for (let i = 0; i < round.subTimers.pos.length; i++) {
+            if (!(side === 'positive' && i === idx) && round.subTimers.pos[i].limitInitial > 0) {
+                round.subTimers.pos[i].limitRemaining = round.subTimers.pos[i].limitInitial * 1000;
+            }
+        }
+        for (let i = 0; i < round.subTimers.neg.length; i++) {
+            if (!(side === 'negative' && i === idx) && round.subTimers.neg[i].limitInitial > 0) {
+                round.subTimers.neg[i].limitRemaining = round.subTimers.neg[i].limitInitial * 1000;
+            }
+        }
+        round.currentSpeaker = side;
+        currentActiveSpeaker = { side: side, index: idx };
+        const st = (side === 'positive') ? round.subTimers.pos[idx] : round.subTimers.neg[idx];
+        if (st) {
+            if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+            delete st.startTotalTimestamp;
+            delete st.startTotalRemaining;
+            delete st.startLimitTimestamp;
+            delete st.startLimitRemaining;
+        }
+        fullRefreshUI();
+        startTimer();
+    }
+
+    function fullRefreshUI() {
+        const round = currentRound();
+        if (!round) return;
+        warningPlayed = false;
+        endBeepPlayed = false;
+        document.getElementById('currentRoundName').innerText = round.name;
+        document.getElementById('positiveTeamName').innerText = globalConfig.positiveTeam;
+        document.getElementById('negativeTeamName').innerText = globalConfig.negativeTeam;
+        document.getElementById('positiveTopic').innerText = globalConfig.positiveTopic;
+        document.getElementById('negativeTopic').innerText = globalConfig.negativeTopic;
+        updateTimerDisplay(round, true);
+        renderControlBar();
+    }
+
+    function renderControlBar() {
+        const round = currentRound();
+        const controlBar = document.getElementById('controlBar');
+        if (round.type === 'single') {
+            controlBar.innerHTML = `<button class="ctrl-btn primary" data-action="start">▶ 开始</button><button class="ctrl-btn" data-action="pause">⏸️ 暂停</button><button class="ctrl-btn warning" data-action="reset">🔄 复位</button>`;
+        } else {
+            controlBar.innerHTML = `<button class="ctrl-btn primary" data-action="start">▶ 开始</button><button class="ctrl-btn" data-action="pause">⏸️ 暂停</button><button class="ctrl-btn warning" data-action="reset">🔄 复位</button><button class="ctrl-btn" data-action="switch">🔄 切换发言方</button>`;
+        }
+    }
+
+    // ======================= 计时器核心（无弹窗，支持总时间不限时的单次限时） =======================
+    function stopTimer() {
+        if (globalTimerInterval) { clearInterval(globalTimerInterval); globalTimerInterval = null; }
+        isTimerRunning = false;
+        if (currentRound()) currentRound().isRunning = false;
+    }
+
+    function updateTimerByTimestamp() {
+        if (!isTimerRunning) return;
+        const round = currentRound();
+        if (!round) { stopTimer(); return; }
+        const now = performance.now();
+        let elapsed = now - startTimestamp;
+        let newRemaining = startRemainingMs - elapsed;
+        if (newRemaining <= 0 && startRemainingMs !== Infinity) {
+            if (!endBeepPlayed) { playEndBeep(); endBeepPlayed = true; }
+            if (round.type === 'single') {
+                if (round.remainingMs !== Infinity) { round.remainingMs = 0; updateTimerDisplay(round); stopTimer(); }
+            } else {
+                if (round.sharedTotalMs !== undefined) {
+                    round.sharedTotalMs = 0;
+                    updateTimerDisplay(round);
+                    stopTimer();
+                } else {
+                    if (round.currentSpeaker === 'positive') {
+                        if (round.positiveRemainingMs !== Infinity) { round.positiveRemainingMs = 0; updateTimerDisplay(round); stopTimer(); }
+                    } else {
+                        if (round.negativeRemainingMs !== Infinity) { round.negativeRemainingMs = 0; updateTimerDisplay(round); stopTimer(); }
+                    }
+                }
+            }
+            return;
+        }
+        if (round.type === 'single') {
+            if (round.remainingMs !== Infinity) round.remainingMs = newRemaining;
+        } else {
+            if (round.sharedTotalMs !== undefined) {
+                round.sharedTotalMs = newRemaining;
+            } else {
+                // 独立模式：只更新当前发言方的总时间（如果有限）
+                if (round.currentSpeaker === 'positive') {
+                    if (round.positiveRemainingMs !== Infinity) round.positiveRemainingMs = newRemaining;
+                } else {
+                    if (round.negativeRemainingMs !== Infinity) round.negativeRemainingMs = newRemaining;
+                }
+            }
+            // 更新子计时器（个人时间和单次限时）
+            if (currentActiveSpeaker) {
+                const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+                if (st) {
+                    if (st.totalInitial > 0 && st.totalRemaining !== Infinity) {
+                        let totalElapsed = now - st.startTotalTimestamp;
+                        let newTotal = st.startTotalRemaining - totalElapsed;
+                        if (newTotal <= 0) {
+                            st.totalRemaining = 0;
+                            if (!endBeepPlayed) { playEndBeep(); endBeepPlayed = true; }
+                            stopTimer();
+                            updateTimerDisplay(round);
+                            return;
+                        } else { st.totalRemaining = newTotal; }
+                    }
+                    if (st.limitInitial > 0 && st.limitRemaining > 0) {
+                        let limitElapsed = now - st.startLimitTimestamp;
+                        let newLimit = st.startLimitRemaining - limitElapsed;
+                        if (newLimit <= 0) {
+                            st.limitRemaining = 0;
+                            if (!endBeepPlayed) { playEndBeep(); endBeepPlayed = true; }
+                            stopTimer();
+                            updateTimerDisplay(round);
+                            return;
+                        } else { st.limitRemaining = newLimit; }
+                    }
+                }
+            }
+        }
+        updateTimerDisplay(round);
+    }
+
+    function startTimer() {
+        const round = currentRound();
+        if (!round) return;
+        if (round.type === 'single') {
+            if (round.remainingMs !== Infinity && round.remainingMs <= 0) { stopTimer(); return; }
+        } else {
+            // 获取当前发言方的总剩余时间（共享模式下为共享时间，独立模式下为正/反方时间）
+            let totalRemaining = (round.sharedTotalMs !== undefined) ? round.sharedTotalMs : (round.currentSpeaker === 'positive' ? round.positiveRemainingMs : round.negativeRemainingMs);
+            // 如果总时间不限，但当前有选中的辩手且该辩手有单次限时，则使用单次限时作为剩余时间
+            if (totalRemaining === Infinity && currentActiveSpeaker) {
+                const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+                if (st && st.limitInitial > 0) {
+                    totalRemaining = st.limitRemaining;
+                } else {
+                    // 完全无限（总时间无限且无单次限时），无法开始计时
+                    return;
+                }
+            }
+            if (totalRemaining !== Infinity && totalRemaining <= 0) {
+                stopTimer();
+                return;
+            }
+            const posSimple = (round.subTimers && round.subTimers.pos.length === 1);
+            const negSimple = (round.subTimers && round.subTimers.neg.length === 1);
+            if (!currentActiveSpeaker) {
+                if (round.currentSpeaker === 'positive' && posSimple) {
+                    currentActiveSpeaker = { side: 'positive', index: 0 };
+                    const st = round.subTimers.pos[0];
+                    if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+                    delete st.startTotalTimestamp; delete st.startTotalRemaining;
+                    delete st.startLimitTimestamp; delete st.startLimitRemaining;
+                    fullRefreshUI();
+                } else if (round.currentSpeaker === 'negative' && negSimple) {
+                    currentActiveSpeaker = { side: 'negative', index: 0 };
+                    const st = round.subTimers.neg[0];
+                    if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+                    delete st.startTotalTimestamp; delete st.startTotalRemaining;
+                    delete st.startLimitTimestamp; delete st.startLimitRemaining;
+                    fullRefreshUI();
+                } else {
+                    // 没有选中辩手，无法开始
+                    return;
+                }
+            }
+            const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+            if (st.totalInitial > 0 && st.totalRemaining <= 0) { stopTimer(); return; }
+            if (st.limitInitial > 0 && st.limitRemaining <= 0) { stopTimer(); return; }
+        }
+        if (globalTimerInterval) stopTimer();
+        startTimestamp = performance.now();
+        if (round.type === 'single') {
+            startRemainingMs = round.remainingMs;
+        } else {
+            let totalRemaining = (round.sharedTotalMs !== undefined) ? round.sharedTotalMs : (round.currentSpeaker === 'positive' ? round.positiveRemainingMs : round.negativeRemainingMs);
+            if (totalRemaining === Infinity && currentActiveSpeaker) {
+                const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+                totalRemaining = st.limitRemaining; // 总时间不限，用单次限时作为倒计时对象
+            }
+            startRemainingMs = totalRemaining;
+        }
+        if (startRemainingMs === Infinity) return;
+        if (round.type === 'double' && currentActiveSpeaker) {
+            const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+            if (st.totalInitial > 0) { st.startTotalTimestamp = performance.now(); st.startTotalRemaining = st.totalRemaining; }
+            if (st.limitInitial > 0) { st.startLimitTimestamp = performance.now(); st.startLimitRemaining = st.limitRemaining; }
+        }
+        endBeepPlayed = false;
+        round.isRunning = true;
+        isTimerRunning = true;
+        globalTimerInterval = setInterval(() => updateTimerByTimestamp(), 10);
+    }
+
+    function pauseTimer() {
+        if (!isTimerRunning) return;
+        const round = currentRound();
+        if (round) {
+            const now = performance.now();
+            let elapsed = now - startTimestamp;
+            let newRemaining = startRemainingMs - elapsed;
+            if (newRemaining < 0) newRemaining = 0;
+            if (round.type === 'single') {
+                if (round.remainingMs !== Infinity) round.remainingMs = newRemaining;
+            } else {
+                if (round.sharedTotalMs !== undefined) {
+                    round.sharedTotalMs = newRemaining;
+                } else {
+                    if (round.currentSpeaker === 'positive') {
+                        if (round.positiveRemainingMs !== Infinity) round.positiveRemainingMs = newRemaining;
+                    } else {
+                        if (round.negativeRemainingMs !== Infinity) round.negativeRemainingMs = newRemaining;
+                    }
+                }
+                if (currentActiveSpeaker) {
+                    const st = (currentActiveSpeaker.side === 'positive') ? round.subTimers.pos[currentActiveSpeaker.index] : round.subTimers.neg[currentActiveSpeaker.index];
+                    if (st) {
+                        if (st.totalInitial > 0) {
+                            let totalElapsed = now - st.startTotalTimestamp;
+                            let newTotal = st.startTotalRemaining - totalElapsed;
+                            if (newTotal < 0) newTotal = 0;
+                            st.totalRemaining = newTotal;
+                        }
+                        if (st.limitInitial > 0) {
+                            let limitElapsed = now - st.startLimitTimestamp;
+                            let newLimit = st.startLimitRemaining - limitElapsed;
+                            if (newLimit < 0) newLimit = 0;
+                            st.limitRemaining = newLimit;
+                        }
+                    }
+                }
+            }
+            updateTimerDisplay(round);
+        }
+        if (globalTimerInterval) { clearInterval(globalTimerInterval); globalTimerInterval = null; }
+        if (currentRound()) currentRound().isRunning = false;
+        isTimerRunning = false;
+    }
+
+    function resetCurrentRound() {
+        const round = currentRound();
+        if (!round) return;
+        stopTimer();
+        if (round.type === 'single') {
+            round.remainingMs = round.totalTimeMs;
+        } else {
+            if (round.sharedTotalMs !== undefined) {
+                round.sharedTotalMs = round.sharedTotalInitial;
+            } else {
+                round.positiveRemainingMs = round.positiveTotalMs;
+                round.negativeRemainingMs = round.negativeTotalMs;
+            }
+            round.currentSpeaker = round.initialSpeaker || 'positive';
+            if (round.subTimers) {
+                for (let st of round.subTimers.pos) {
+                    st.totalRemaining = st.totalInitial * 1000;
+                    if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+                    else st.limitRemaining = 0;
+                    delete st.startTotalTimestamp; delete st.startTotalRemaining;
+                    delete st.startLimitTimestamp; delete st.startLimitRemaining;
+                }
+                for (let st of round.subTimers.neg) {
+                    st.totalRemaining = st.totalInitial * 1000;
+                    if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+                    else st.limitRemaining = 0;
+                    delete st.startTotalTimestamp; delete st.startTotalRemaining;
+                    delete st.startLimitTimestamp; delete st.startLimitRemaining;
+                }
+            }
+            currentActiveSpeaker = null;
+        }
+        warningPlayed = false;
+        endBeepPlayed = false;
+        fullRefreshUI();
+    }
+
+    function switchSpeaker() {
+        const round = currentRound();
+        if (!round || round.type !== 'double') return;
+        stopTimer();
+        if (round.subTimers) {
+            for (let st of round.subTimers.pos) if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+            for (let st of round.subTimers.neg) if (st.limitInitial > 0) st.limitRemaining = st.limitInitial * 1000;
+        }
+        round.currentSpeaker = (round.currentSpeaker === 'positive') ? 'negative' : 'positive';
+        currentActiveSpeaker = null;
+        warningPlayed = false;
+        endBeepPlayed = false;
+        fullRefreshUI();
+        startTimer();
+    }
+
+    // ======================= 新增环节（增加双方共享时间选项，简化设置） =======================
+    function showAddRoundDialog() {
+        const isSingle = confirm("选择环节类型: 确定=单方计时，取消=双方计时");
+        let name = prompt("请输入环节名称", isSingle ? "新环节" : "对辩环节");
+        if (!name) name = "新环节";
+        if (isSingle) {
+            let timeSec = parseInt(prompt("总计时长(秒, 0为不限)", "180"));
+            if (isNaN(timeSec)) timeSec = 180;
+            const totalMs = (timeSec === 0) ? Infinity : timeSec * 1000;
+            rounds.push({ id: Date.now()+Math.random(), type: 'single', name, totalTimeMs: totalMs, remainingMs: totalMs, isRunning: false });
+        } else {
+            let isShared = confirm("是否使用双方共享总时间模式？（确定=共享，取消=独立）");
+            let sharedSec = 0;
+            let posSec = 0, negSec = 0;
+            if (isShared) {
+                sharedSec = parseInt(prompt("双方共享总时间(秒, 0为不限)", "180"));
+                if (isNaN(sharedSec)) sharedSec = 180;
+            } else {
+                posSec = parseInt(prompt("正方总时间(秒, 0为不限)", "180"));
+                negSec = parseInt(prompt("反方总时间(秒, 0为不限)", "180"));
+                if (isNaN(posSec)) posSec = 180;
+                if (isNaN(negSec)) negSec = 180;
+            }
+            let posLimitSec = parseInt(prompt("正方单次发言限时(秒, 0为不限)", "0"));
+            let negLimitSec = parseInt(prompt("反方单次发言限时(秒, 0为不限)", "0"));
+            if (isNaN(posLimitSec)) posLimitSec = 0;
+            if (isNaN(negLimitSec)) negLimitSec = 0;
+            const subTimers = {
+                pos: [{ totalInitial: 0, limitInitial: posLimitSec, totalRemaining: 0, limitRemaining: (posLimitSec > 0 ? posLimitSec * 1000 : 0) }],
+                neg: [{ totalInitial: 0, limitInitial: negLimitSec, totalRemaining: 0, limitRemaining: (negLimitSec > 0 ? negLimitSec * 1000 : 0) }]
+            };
+            if (isShared) {
+                const sharedMs = (sharedSec === 0) ? Infinity : sharedSec * 1000;
+                rounds.push({
+                    id: Date.now()+Math.random(), type: 'double', name,
+                    sharedTotalMs: sharedMs, sharedTotalInitial: sharedMs,
+                    positiveTotalMs: sharedMs, negativeTotalMs: sharedMs,
+                    positiveRemainingMs: sharedMs, negativeRemainingMs: sharedMs,
+                    currentSpeaker: 'positive', subTimers: subTimers,
+                    isRunning: false, initialSpeaker: 'positive'
+                });
+            } else {
+                const posTotalMs = (posSec === 0) ? Infinity : posSec * 1000;
+                const negTotalMs = (negSec === 0) ? Infinity : negSec * 1000;
+                rounds.push({
+                    id: Date.now()+Math.random(), type: 'double', name,
+                    positiveTotalMs: posTotalMs, negativeTotalMs: negTotalMs,
+                    positiveRemainingMs: posTotalMs, negativeRemainingMs: negTotalMs,
+                    currentSpeaker: 'positive', subTimers: subTimers,
+                    isRunning: false, initialSpeaker: 'positive'
+                });
+            }
+        }
+        if (rounds.length === 1) currentRoundIndex = 0;
+        renderRoundList();
+        switchToRound(currentRoundIndex);
+    }
+
+    // ======================= 导出PDS =======================
+    function exportToPDS() {
+        if (rounds.length === 0) { alert("没有环节可导出"); return; }
+        let hasMulti = false;
+        for (let round of rounds) {
+            if (round.type === 'double' && round.subTimers && (round.subTimers.pos.length > 1 || round.subTimers.neg.length > 1)) {
+                hasMulti = true; break;
+            }
+        }
+        if (hasMulti) alert("提示：本赛制包含多个子计时器（辩手），PDS标准格式仅支持单计时器。导出时将只使用正方/反方第一个子计时器的单次限时，其他子计时器数据将丢失。");
+        let pdsContent = "[PDS赛制模板v4]\n";
+        for (let round of rounds) {
+            if (round.type === 'single') {
+                let totalSec = (round.totalTimeMs === Infinity) ? 0 : Math.floor(round.totalTimeMs / 1000);
+                pdsContent += `${round.name}___N/A___N/A___Z_SUM=${totalSec}\n`;
+            } else {
+                if (round.sharedTotalMs !== undefined) {
+                    let sharedSec = (round.sharedTotalMs === Infinity) ? 0 : Math.floor(round.sharedTotalMs / 1000);
+                    let posLimit = (round.subTimers && round.subTimers.pos.length) ? round.subTimers.pos[0].limitInitial : 0;
+                    let negLimit = (round.subTimers && round.subTimers.neg.length) ? round.subTimers.neg[0].limitInitial : 0;
+                    pdsContent += `${round.name}___正方___反方___B_ALL=${sharedSec}_LIM=${posLimit}_LIM=${negLimit}\n`;
+                } else {
+                    let posSec = (round.positiveTotalMs === Infinity) ? 0 : Math.floor(round.positiveTotalMs / 1000);
+                    let negSec = (round.negativeTotalMs === Infinity) ? 0 : Math.floor(round.negativeTotalMs / 1000);
+                    let posLimit = (round.subTimers && round.subTimers.pos.length) ? round.subTimers.pos[0].limitInitial : 0;
+                    let negLimit = (round.subTimers && round.subTimers.neg.length) ? round.subTimers.neg[0].limitInitial : 0;
+                    pdsContent += `${round.name}___正方___反方___B_SUM=${posSec}_SUM=${negSec}_LIM=${posLimit}_LIM=${negLimit}\n`;
+                }
+            }
+        }
+        pdsContent += "[END]\n[HASH]dummy\n# 由辩论赛计时器导出";
+        const blob = new Blob([pdsContent], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "debate_schedule.pds";
+        link.click();
+        URL.revokeObjectURL(link.href);
+        document.getElementById('pdsStatus').innerHTML = "✅ 已导出PDS文件" + (hasMulti ? " (多计时器已简化)" : "");
+    }
+
+    // ======================= 环节管理 =======================
+    function switchToRound(index) {
+        if (index < 0 || index >= rounds.length) return;
+        stopTimer();
+        currentRoundIndex = index;
+        const round = currentRound();
+        if (round.type === 'double' && !round.currentSpeaker) round.currentSpeaker = 'positive';
+        currentActiveSpeaker = null;
+        warningPlayed = false;
+        endBeepPlayed = false;
+        fullRefreshUI();
+        renderRoundList();
+    }
+
+    function moveRound(idx, direction) {
+        if (direction === 'up' && idx > 0) {
+            [rounds[idx-1], rounds[idx]] = [rounds[idx], rounds[idx-1]];
+            if (currentRoundIndex === idx) currentRoundIndex = idx-1;
+            else if (currentRoundIndex === idx-1) currentRoundIndex = idx;
+        } else if (direction === 'down' && idx < rounds.length-1) {
+            [rounds[idx+1], rounds[idx]] = [rounds[idx], rounds[idx+1]];
+            if (currentRoundIndex === idx) currentRoundIndex = idx+1;
+            else if (currentRoundIndex === idx+1) currentRoundIndex = idx;
+        }
+        renderRoundList();
+        if (rounds.length) switchToRound(currentRoundIndex);
+    }
+
+    function renderRoundList() {
+        const container = document.getElementById('roundListContainer');
+        if (!container) return;
+        if (rounds.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px">暂无环节，请新增或上传PDS</div>';
+            return;
+        }
+        container.innerHTML = rounds.map((round, idx) => `
+            <div class="round-item ${idx === currentRoundIndex ? 'active' : ''}" data-idx="${idx}">
+                <div class="round-info">
+                    <div class="round-name">${escapeHtml(round.name)}</div>
+                    <div class="round-type">${round.type === 'single' ? '🎙️ 单方计时' : '⚖️ 双方计时' + (round.subTimers ? ` (正${round.subTimers.pos.length}/反${round.subTimers.neg.length})` : '')}</div>
+                </div>
+                <div class="round-actions">
+                    ${idx > 0 ? `<button class="small-btn move-btn" data-move="up" data-idx="${idx}">▲</button>` : ''}
+                    ${idx < rounds.length-1 ? `<button class="small-btn move-btn" data-move="down" data-idx="${idx}">▼</button>` : ''}
+                    <button class="small-btn delete-round" data-idx="${idx}">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.round-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-round') || e.target.classList.contains('move-btn')) return;
+                const idx = parseInt(el.dataset.idx);
+                if (!isNaN(idx)) switchToRound(idx);
+            });
+        });
+        document.querySelectorAll('.delete-round').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.idx);
+                if (confirm(`删除环节「${rounds[idx].name}」?`)) {
+                    if (rounds.length === 1) {
+                        rounds = []; currentRoundIndex = 0; renderRoundList();
+                        document.getElementById('timerDisplayArea').innerHTML = '<div style="text-align:center;padding:40px">请新增环节或上传PDS</div>';
+                        stopTimer(); return;
+                    }
+                    rounds.splice(idx, 1);
+                    if (currentRoundIndex >= idx) currentRoundIndex = Math.max(0, currentRoundIndex-1);
+                    if (currentRoundIndex >= rounds.length) currentRoundIndex = rounds.length-1;
+                    renderRoundList();
+                    if (rounds.length) switchToRound(currentRoundIndex);
+                    else fullRefreshUI();
+                }
+            });
+        });
+        document.querySelectorAll('.move-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.dataset.idx);
+                const direction = btn.dataset.move;
+                moveRound(idx, direction);
+            });
+        });
+    }
+
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    function currentRound() { return rounds[currentRoundIndex] || null; }
+
+    // ======================= PDS解析器（修正独立模式下单次限时与总时间无限的处理） =======================
+    function parsePDS(content) {
+        const lines = content.split(/\r?\n/);
+        const newRounds = [];
+        let inBody = false;
+        for (let line of lines) {
+            line = line.trim();
+            if (line.startsWith('[PDS赛制模板')) { inBody = true; continue; }
+            if (line === '[END]') break;
+            if (!inBody || line === '' || line.startsWith('[HASH]')) continue;
+            const parts = line.split('___');
+            if (parts.length < 4) continue;
+            const roundName = parts[0].trim();
+            let controlCode = parts[3].trim();
+            const codeMatch = controlCode.match(/^([A-Za-z_=U0-9]+)/);
+            if (!codeMatch) continue;
+            let code = codeMatch[1];
+            
+            if (code.startsWith('Z_') || code.startsWith('F_')) {
+                let totalSec = 0;
+                const sumMatch = code.match(/(?:Z|F)_SUM=(\d+)/);
+                if (sumMatch) totalSec = parseInt(sumMatch[1]) || 0;
+                else {
+                    const allMatch = code.match(/(?:Z|F)_ALL=(\d+)/);
+                    if (allMatch) totalSec = parseInt(allMatch[1]) || 0;
+                }
+                const totalMs = (totalSec === 0) ? Infinity : totalSec * 1000;
+                newRounds.push({
+                    id: Date.now() + Math.random(),
+                    type: 'single',
+                    name: roundName,
+                    totalTimeMs: totalMs,
+                    remainingMs: totalMs,
+                    isRunning: false
+                });
+            } else if (code.startsWith('B_')) {
+                let hasAll = false;
+                let allSec = 0;
+                let posLimitSec = 0, negLimitSec = 0;
+                let posTotalSec = 0, negTotalSec = 0;
+                const pairs = code.split('_').slice(1);
+                for (let pair of pairs) {
+                    const [key, val] = pair.split('=');
+                    if (key === 'ALL') {
+                        hasAll = true;
+                        allSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                        break;
+                    }
+                }
+                if (hasAll) {
+                    const sharedMs = (allSec === 0) ? Infinity : allSec * 1000;
+                    let limitCount = 0;
+                    for (let pair of pairs) {
+                        const [key, val] = pair.split('=');
+                        if (key === 'LIM') {
+                            if (limitCount === 0) {
+                                posLimitSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                                limitCount++;
+                            } else if (limitCount === 1) {
+                                negLimitSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                                limitCount++;
+                            }
+                        }
+                    }
+                    const subTimers = {
+                        pos: [{ totalInitial: 0, limitInitial: posLimitSec, totalRemaining: 0, limitRemaining: (posLimitSec > 0 ? posLimitSec * 1000 : 0) }],
+                        neg: [{ totalInitial: 0, limitInitial: negLimitSec, totalRemaining: 0, limitRemaining: (negLimitSec > 0 ? negLimitSec * 1000 : 0) }]
+                    };
+                    newRounds.push({
+                        id: Date.now() + Math.random(),
+                        type: 'double',
+                        name: roundName,
+                        sharedTotalMs: sharedMs,
+                        sharedTotalInitial: sharedMs,
+                        positiveTotalMs: sharedMs,
+                        negativeTotalMs: sharedMs,
+                        positiveRemainingMs: sharedMs,
+                        negativeRemainingMs: sharedMs,
+                        currentSpeaker: 'positive',
+                        subTimers: subTimers,
+                        isRunning: false,
+                        initialSpeaker: 'positive'
+                    });
+                } else {
+                    let sumCount = 0, limitCount = 0;
+                    for (let pair of pairs) {
+                        const [key, val] = pair.split('=');
+                        if (key === 'SUM') {
+                            if (sumCount === 0) {
+                                posTotalSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                                sumCount++;
+                            } else {
+                                negTotalSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                            }
+                        } else if (key === 'LIM') {
+                            if (limitCount === 0) {
+                                posLimitSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                                limitCount++;
+                            } else {
+                                negLimitSec = (val === 'U') ? 0 : (parseInt(val) || 0);
+                            }
+                        }
+                    }
+                    const posTotalMs = (posTotalSec === 0) ? Infinity : posTotalSec * 1000;
+                    const negTotalMs = (negTotalSec === 0) ? Infinity : negTotalSec * 1000;
+                    const subTimers = {
+                        pos: [{ totalInitial: 0, limitInitial: posLimitSec, totalRemaining: 0, limitRemaining: (posLimitSec > 0 ? posLimitSec * 1000 : 0) }],
+                        neg: [{ totalInitial: 0, limitInitial: negLimitSec, totalRemaining: 0, limitRemaining: (negLimitSec > 0 ? negLimitSec * 1000 : 0) }]
+                    };
+                    newRounds.push({
+                        id: Date.now() + Math.random(),
+                        type: 'double',
+                        name: roundName,
+                        positiveTotalMs: posTotalMs,
+                        negativeTotalMs: negTotalMs,
+                        positiveRemainingMs: posTotalMs,
+                        negativeRemainingMs: negTotalMs,
+                        currentSpeaker: 'positive',
+                        subTimers: subTimers,
+                        isRunning: false,
+                        initialSpeaker: 'positive'
+                    });
+                }
+            } else {
+                newRounds.push({
+                    id: Date.now() + Math.random(),
+                    type: 'single',
+                    name: roundName,
+                    totalTimeMs: 180000,
+                    remainingMs: 180000,
+                    isRunning: false
+                });
+            }
+        }
+        return newRounds;
+    }
+
+    // ======================= 事件绑定与初始化 =======================
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        switch (action) {
+            case 'start': startTimer(); break;
+            case 'pause': pauseTimer(); break;
+            case 'reset': resetCurrentRound(); break;
+            case 'switch': switchSpeaker(); break;
+            case 'prev': if (rounds.length && currentRoundIndex > 0) switchToRound(currentRoundIndex-1); else alert('已是第一个环节'); break;
+            case 'next': if (rounds.length && currentRoundIndex < rounds.length-1) switchToRound(currentRoundIndex+1); else alert('已是最后一个环节'); break;
+        }
+    });
+
+    document.getElementById('addRoundBtn')?.addEventListener('click', showAddRoundDialog);
+    document.getElementById('exportPdsBtn')?.addEventListener('click', exportToPDS);
+    document.getElementById('editGlobalBtn')?.addEventListener('click', () => {
+        let newPosTeam = prompt("正方队伍名称", globalConfig.positiveTeam);
+        let newNegTeam = prompt("反方队伍名称", globalConfig.negativeTeam);
+        let newPosTopic = prompt("正方辩题", globalConfig.positiveTopic);
+        let newNegTopic = prompt("反方辩题", globalConfig.negativeTopic);
+        if (newPosTeam) globalConfig.positiveTeam = newPosTeam;
+        if (newNegTeam) globalConfig.negativeTeam = newNegTeam;
+        if (newPosTopic) globalConfig.positiveTopic = newPosTopic;
+        if (newNegTopic) globalConfig.negativeTopic = newNegTopic;
+        document.getElementById('globalInfoPreview').innerHTML = `正方: ${globalConfig.positiveTopic} | 反方: ${globalConfig.negativeTopic}<br>正方队: ${globalConfig.positiveTeam} | 反方队: ${globalConfig.negativeTeam}`;
+        fullRefreshUI();
+    });
+
+    const pdsUpload = document.getElementById('pdsUpload');
+    if (pdsUpload) {
+        pdsUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    const content = ev.target.result;
+                    const newRounds = parsePDS(content);
+                    if (newRounds.length === 0) {
+                        alert("PDS解析失败，未识别到有效环节。请检查格式(每行用___分隔)");
+                        document.getElementById('pdsStatus').innerHTML = "❌ 解析失败";
+                        return;
+                    }
+                    rounds = newRounds;
+                    currentRoundIndex = 0;
+                    stopTimer();
+                    renderRoundList();
+                    switchToRound(0);
+                    document.getElementById('pdsStatus').innerHTML = `✅ 已加载 ${rounds.length} 个环节 (PDS规则)`;
+                } catch(err) {
+                    alert("解析出错: " + err.message);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        });
+    }
+
+    const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
+    function enterFullscreen() { document.body.requestFullscreen?.(); document.body.classList.add('fullscreen-mode'); fullscreenBtn.textContent = '🚪 退出全屏'; }
+    function exitFullscreen() { document.exitFullscreen?.(); document.body.classList.remove('fullscreen-mode'); fullscreenBtn.textContent = '🖥️ 全屏计时'; }
+    fullscreenBtn?.addEventListener('click', () => { if (!document.fullscreenElement) enterFullscreen(); else exitFullscreen(); });
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) { document.body.classList.remove('fullscreen-mode'); fullscreenBtn.textContent = '🖥️ 全屏计时'; }
+        else { document.body.classList.add('fullscreen-mode'); fullscreenBtn.textContent = '🚪 退出全屏'; }
+    });
+
+    function initDemo() {
+        rounds = [];
+        currentRoundIndex = 0;
+        renderRoundList();
+        fullRefreshUI();
+    }
+    initDemo();
+</script>
+</body>
+</html>
